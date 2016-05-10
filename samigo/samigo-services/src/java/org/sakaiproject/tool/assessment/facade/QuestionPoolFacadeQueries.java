@@ -1321,7 +1321,6 @@ public class QuestionPoolFacadeQueries
       item.setCreatedDate(new Date());
       item.setLastModifiedBy(AgentFacade.getAgentString());
       item.setLastModifiedDate(new Date());
-      item.setInstruction(itemData.getInstruction());
       item.setHasRationale(itemData.getHasRationale());
       item.setTriesAllowed(itemData.getTriesAllowed());
       item.setDuration(itemData.getDuration());
@@ -1332,15 +1331,16 @@ public class QuestionPoolFacadeQueries
       item.setItemTextSet(copyItemText(item.getData(), itemData));
       item.setItemMetaDataSet(copyMetaData(item.getData(), itemData));
       item.setItemAttachmentSet(copyAttachment(item.getData(), itemData));
+      item.setInstruction(copyStringAttachment(itemData.getInstruction()));
 
       if (itemData.getCorrectItemFeedback() != null && !itemData.getCorrectItemFeedback().equals("")) {
-    	  item.setCorrectItemFeedback(itemData.getCorrectItemFeedback());
+    	  item.setCorrectItemFeedback(copyStringAttachment(itemData.getCorrectItemFeedback()));
       }
       if (itemData.getInCorrectItemFeedback() != null && !itemData.getInCorrectItemFeedback().equals("")) {
-    	  item.setInCorrectItemFeedback(itemData.getInCorrectItemFeedback());
+    	  item.setInCorrectItemFeedback(copyStringAttachment(itemData.getInCorrectItemFeedback()));
       }
       if (itemData.getGeneralItemFeedback() != null && !itemData.getGeneralItemFeedback().equals("")) {
-    	  item.setGeneralItemFeedback(itemData.getGeneralItemFeedback());
+    	  item.setGeneralItemFeedback(copyStringAttachment(itemData.getGeneralItemFeedback()));
       }
       
       return item;
@@ -1400,6 +1400,13 @@ public class QuestionPoolFacadeQueries
 	  Set toSet = assessmentService.copyItemAttachmentSet((ItemData) toItemData, fromItemData.getItemAttachmentSet());
 	    
 	  return toSet;
+  }
+  
+  private String copyStringAttachment(String stringWithAttachment) {
+	  AssessmentService assessmentService = new AssessmentService();
+	  String newString = assessmentService.copyContentHostingAttachments(stringWithAttachment, AgentFacade.getCurrentSiteId()); 
+	    
+	  return newString;
   }
   
   public Integer getCountItemFacades(final Long questionPoolId) {	    

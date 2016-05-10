@@ -29,6 +29,7 @@ import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.sakaiproject.component.cover.ServerConfigurationService;
 import org.sakaiproject.content.api.ContentResource;
 import org.sakaiproject.tool.assessment.data.dao.assessment.Answer;
 import org.sakaiproject.tool.assessment.data.dao.assessment.AnswerFeedback;
@@ -42,6 +43,7 @@ import org.sakaiproject.tool.assessment.data.dao.assessment.ItemTextAttachment;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.ItemAttachmentIfc;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.ItemDataIfc;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.ItemTextAttachmentIfc;
+import org.sakaiproject.tool.assessment.facade.AgentFacade;
 import org.sakaiproject.tool.assessment.facade.ItemFacade;
 import org.sakaiproject.tool.assessment.services.assessment.AssessmentService;
 
@@ -261,12 +263,14 @@ public class ItemService
     Set newItemMetaDataSet = copyItemMetaDataSet(cloned, item.getItemMetaDataSet());
     Set newItemFeedbackSet = copyItemFeedbackSet(cloned, item.getItemFeedbackSet());
     Set newItemAttachmentSet = copyItemAttachmentSet(cloned, item.getItemAttachmentSet());
+    String newItemInstruction = copyStringAttachment(item.getInstruction());
     cloned.setItemTextSet(newItemTextSet);
     cloned.setItemMetaDataSet(newItemMetaDataSet);
     cloned.setItemFeedbackSet(newItemFeedbackSet);
     cloned.setItemAttachmentSet(newItemAttachmentSet);
     cloned.setAnswerOptionsSimpleOrRich(item.getAnswerOptionsSimpleOrRich());
     cloned.setAnswerOptionsRichCount(item.getAnswerOptionsRichCount());
+    cloned.setInstruction(newItemInstruction);
 
     return cloned;
   }
@@ -276,7 +280,8 @@ public class ItemService
     Iterator k = itemTextSet.iterator();
     while (k.hasNext()) {
       ItemText itemText = (ItemText) k.next();
-      ItemText newItemText = new ItemText(cloned, itemText.getSequence(), itemText.getText(), null);
+      String newText = copyStringAttachment(itemText.getText());
+      ItemText newItemText = new ItemText(cloned, itemText.getSequence(), newText, null);
       newItemText.setRequiredOptionsCount(itemText.getRequiredOptionsCount());
       newItemText.setItemTextAttachmentSet(copyItemAttachmentSetItemText(newItemText, itemText.getItemTextAttachmentSet()));
       Set newAnswerSet = copyAnswerSet(newItemText, itemText.getAnswerSet());
@@ -335,7 +340,7 @@ public class ItemService
     while (o.hasNext()) {
       ItemFeedback itemFeedback = (ItemFeedback) o.next();
       ItemFeedback newItemFeedback = new ItemFeedback(
-          cloned, itemFeedback.getTypeId(), itemFeedback.getText());
+          cloned, itemFeedback.getTypeId(), copyStringAttachment(itemFeedback.getText()));
       h.add(newItemFeedback);
     }
     return h;
@@ -349,10 +354,12 @@ public class ItemService
       ItemAttachmentIfc itemAttachment = (ItemAttachmentIfc) n.next();
       ContentResource cr_copy = service.createCopyOfContentResource(
                            itemAttachment.getResourceId(), itemAttachment.getFilename());
+      // get relative path
+      String url = getRelativePath(cr_copy.getUrl(), ServerConfigurationService.getServerUrl());
       ItemAttachmentIfc newItemAttachment = new ItemAttachment(
         null, cr_copy.getId(), itemAttachment.getFilename(),
         itemAttachment.getMimeType(), itemAttachment.getFileSize(), itemAttachment.getDescription(),
-        cr_copy.getUrl(), itemAttachment.getIsLink(), itemAttachment.getStatus(),
+        url, itemAttachment.getIsLink(), itemAttachment.getStatus(),
         itemAttachment.getCreatedBy(), itemAttachment.getCreatedDate(), itemAttachment.getLastModifiedBy(),
         itemAttachment.getLastModifiedDate());
       newItemAttachment.setItem(cloned);
@@ -369,16 +376,25 @@ public class ItemService
 	  ItemTextAttachmentIfc ItemTextAttachment = (ItemTextAttachmentIfc) n.next();
 	  ContentResource cr_copy = service.createCopyOfContentResource(
 	    		  			ItemTextAttachment.getResourceId(), ItemTextAttachment.getFilename());
+      // get relative path
+      String url = getRelativePath(cr_copy.getUrl(), ServerConfigurationService.getServerUrl());
 	  ItemTextAttachmentIfc newItemTextAttachment = new ItemTextAttachment(
 	    null, cr_copy.getId(), ItemTextAttachment.getFilename(),
 	    ItemTextAttachment.getMimeType(), ItemTextAttachment.getFileSize(), ItemTextAttachment.getDescription(),
-	    cr_copy.getUrl(), ItemTextAttachment.getIsLink(), ItemTextAttachment.getStatus(),
+	    url, ItemTextAttachment.getIsLink(), ItemTextAttachment.getStatus(),
 	    ItemTextAttachment.getCreatedBy(), ItemTextAttachment.getCreatedDate(), ItemTextAttachment.getLastModifiedBy(),
 	    ItemTextAttachment.getLastModifiedDate());
 	   newItemTextAttachment.setItemText(itemText);
 	   h.add(newItemTextAttachment);
 	}
 	return h;
+  }
+
+  private String copyStringAttachment(String stringWithAttachment) {
+	  AssessmentService assessmentService = new AssessmentService();
+	  String newString = assessmentService.copyContentHostingAttachments(stringWithAttachment, AgentFacade.getCurrentSiteId()); 
+	    
+	  return newString;
   }
 
   public void deleteSet(Set s)
@@ -409,5 +425,31 @@ public class ItemService
           log.error(e.getMessage(), e);
           throw new RuntimeException(e);
 	  }
+  }
+  
+  public String getRelativePath(String url, String protocol) {
+	  // replace whitespace with %20
+	  url = replaceSpace(url);
+	  int index = url.lastIndexOf(protocol);
+	  if (index == 0) {
+		  url = url.substring(protocol.length());
+	  }
+	  return url;
+  }
+	  
+  // Replace whitespace with %20
+  private String replaceSpace(String tempString) {
+	  String newString = "";
+	  char[] oneChar = new char[1];
+	  for (int i = 0; i < tempString.length(); i++) {
+	  	if (tempString.charAt(i) != ' ') {
+	  	  oneChar[0] = tempString.charAt(i);
+	  	  String concatString = new String(oneChar);
+	  	  newString = newString.concat(concatString);
+	  	} else {
+	  	  newString = newString.concat("%20");
+	  	}
+	  }
+	  return newString;
   }
 }
