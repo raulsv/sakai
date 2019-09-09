@@ -169,6 +169,107 @@ function TimeOutAction(toUrl, formId, buttonName, updateVar, updateVar2, repeatM
     return ActionResult;
 }
 
+function SaveFormContentAsyncOnce(toUrl, formId, buttonName, updateVar, updateVar2, ok ) {
+//function SaveFormContentAsyncOnce(toUrl, formId, buttonName, updateVar, updateVar2, ok, component) {
+	if (!ok) { 
+		return;
+    }
+
+    // asyncronously send form content to toUrl and notify to the student the result
+    var request = initXMLHTTPRequest();
+    var method = "POST";
+    var async = true;
+    var payload;
+    function onready_callback() {
+		var state = request.readyState;
+		if (state!=4) {
+			// ignore intermediate states
+			return;
+		}
+		// This is an Ajax response. It isn't normally processed.
+		// So if we need anything from it we have to get it.
+		// Get new date from response and update the form variable
+
+		var saveok = true;
+		var text = request.responseText;
+		//'takeAssessmentForm:lastSubmittedDate1', 'takeAssessmentForm:lastSubmittedDate2' == updateVar (fecha envío desde confirmación), updateVar2 (fecha guardado/envío viendo el examen)
+		
+		var i = text.indexOf('"' + updateVar);
+		if (i < 0) {
+			i = text.indexOf('"' + updateVar2);	    
+		}
+		var j = -1;
+		if (i >= 0) {
+			i = text.indexOf("value=", i);
+		}
+		if (i >= 0) {
+			j = text.indexOf('"', i+7);
+		}
+		if (j >= 0) {
+			var d = text.substring(i+7, j);
+			if (document.forms[0].elements[updateVar] != null) {
+				document.forms[0].elements[updateVar].value = d;
+			} else if (document.forms[0].elements[updateVar2] != null) {
+				document.forms[0].elements[updateVar2].value = d;
+			} else {
+				saveok = false;
+			}
+		} else {
+			saveok = false;
+		}
+		// Now that we have the updated date, it's safe for the user to do submits.
+		// Reenable any buttons we disabled.
+
+		for (var i=0; i<disabledButtons.length; i++) {
+			document.forms[0].elements[disabledButtons[i]].disabled=false;
+		}
+
+		// And links
+
+		for (var i=0; i<disabledLinks.length; i++) {
+			var item = disabledLinks[i];
+			var link = document.getElementById(item[0]);
+			link.onmouseup = item[1];
+			link.onclick = item[2];
+		}
+		var feedback, style, schedule = 2000;//the message disapears after 2 seconds
+		// wait and then call save form again
+		if (!saveok) {
+			//alert("Attempt to save your work automatically failed. One common cause is that you have a second window open on Tests and Quizes. We strongly suggest that you not continue working in this window. If you go to the top level of Tests and Quizes, you can restart this test or quiz.");
+			feedback = failureMsg;
+			schedule *= 10;//the message disapears after 20 seconds
+			style = "messageError"
+		} else {
+			feedback = successMsg;
+			style = "messageSuccess"
+		}
+		
+		if($("[id*=qSaveStatus]")){
+			$("[id*=qSaveStatus]").text(feedback).attr("class",style).fadeIn();
+			setTimeout(msgFadeOut,schedule);
+		/*
+		if(component){
+			$(component).text(feedback).attr("class",style).fadeIn();
+			setTimeout(function() {
+							msgFadeOut(component);
+					   }, schedule);*/
+    	}
+		window.status = "";//Para que no salga 'Saving...' en la barra de estado
+		// when the request is done the scope of the function can be garbage collected...
+    }
+	//Cuando Counter es 2 o mayor, a partir de la 2da llamada de la función, se ejecuta la llamada ajax "onready_callback"
+	//doautosave es true siempre
+		
+	payload = GetFormContent(formId, buttonName);/* 'takeAssessmentForm', 'takeAssessmentForm:autoSave'*/
+	request.open(method, toUrl, async); /* POST, deliverAssessment.faces, true */
+	request.onreadystatechange = onready_callback;
+	request.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+	window.status = "Saving...";
+	request.send(payload);
+
+    // onready_callback called on request response.
+}
+
 function initXMLHTTPRequest() {
         var result = null;
         if (window.XMLHttpRequest) {
@@ -183,3 +284,36 @@ function initXMLHTTPRequest() {
         return result;
 }
 
+function msgFadeOut(){
+	if($("[id*=qSaveStatus]")){
+		$("[id*=qSaveStatus]").fadeOut();
+	}
+}
+/*
+function msgFadeOut(component){
+	if(component){
+		component.fadeOut();
+	}
+}
+*/
+
+function proxySave(){
+	SaveFormContentAsyncOnce('deliverAssessment.faces', 'takeAssessmentForm', 'takeAssessmentForm:autoSave', 'takeAssessmentForm:lastSubmittedDate1', 'takeAssessmentForm:lastSubmittedDate2', takeAssessment);
+}
+/*
+function proxySave(component){
+	SaveFormContentAsyncOnce('deliverAssessment.faces', 'takeAssessmentForm', 'takeAssessmentForm:autoSave', 'takeAssessmentForm:lastSubmittedDate1', 'takeAssessmentForm:lastSubmittedDate2', takeAssessment, component);
+}
+*/
+	
+var callSave = proxySave;
+
+$(function() { 
+	
+	$("[id*=qSaveStatus]").addClass("hidden");
+	
+	$("[id*=samigo-mc-select-one]").click(function(){
+		callSave();
+		//SaveFormContentAsyncOnce('deliverAssessment.faces', 'takeAssessmentForm', 'takeAssessmentForm:autoSave', 'takeAssessmentForm:lastSubmittedDate1', 'takeAssessmentForm:lastSubmittedDate2', takeAssessment, this);
+	});
+});

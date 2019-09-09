@@ -577,6 +577,10 @@ document.links[newindex].onclick();
 <script type="text/javascript" src="/samigo-app/js/questionProgress.js"></script>
 <script type="text/JavaScript">
 	<%= request.getAttribute("html.body.onload") %> 
+	var takeAssessment = '<h:outputText value="#{delivery.actionString==\'takeAssessment\' or delivery.actionString==\'takeAssessmentViaUrl\'}"/>';
+	var successMsg = '<h:outputText value="#{deliveryMessages.successMsg}"/>';
+	var failureMsg = '<h:outputText value="#{deliveryMessages.failureMsg}"/>';
+	
 	setLocation(); 
 	checkRadio();
 	fixImplicitLabeling();
