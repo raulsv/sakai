@@ -298,6 +298,7 @@ public class AssessmentSettingsBean
 	}
         ExtendedTimeFacade extendedTimeFacade = PersistenceService.getInstance().getExtendedTimeFacade();
         this.extendedTimes = extendedTimeFacade.getEntriesForAss(assessment.getData());
+        extendedTimesToUserZone();
 
         resetExtendedTime();
 
@@ -305,10 +306,10 @@ public class AssessmentSettingsBean
       AssessmentAccessControlIfc accessControl;
       accessControl = assessment.getAssessmentAccessControl();
       if (accessControl != null) {
-        this.startDate = accessControl.getStartDate();
-        this.dueDate = accessControl.getDueDate();
-        this.retractDate = accessControl.getRetractDate();
-        this.feedbackDate = accessControl.getFeedbackDate();
+    	this.startDate = tu.getDateTimeWithTimezoneConversion(accessControl.getStartDate());
+        this.dueDate = tu.getDateTimeWithTimezoneConversion(accessControl.getDueDate());
+        this.retractDate = tu.getDateTimeWithTimezoneConversion(accessControl.getRetractDate());
+        this.feedbackDate = tu.getDateTimeWithTimezoneConversion(accessControl.getFeedbackDate());
         // deal with releaseTo
         this.releaseTo = accessControl.getReleaseTo(); // list of String
         this.publishingTargets = getPublishingTargets();
@@ -447,6 +448,16 @@ public class AssessmentSettingsBean
     }
   }
 
+  
+  	private void extendedTimesToUserZone() {
+  		if(this.extendedTimes!=null) {
+	  		this.extendedTimes.stream().forEach(m -> 
+				  m.updateDates(tu.getDateTimeWithTimezoneConversion(m.getStartDate()),
+						  		tu.getDateTimeWithTimezoneConversion(m.getDueDate()),
+						  		tu.getDateTimeWithTimezoneConversion(m.getRetractDate())));
+  		}
+  	}
+  
     /**
      * Returns the saved category id if it's there. Otherwise returns
      * "-1". This is needed to choose which select item is selected

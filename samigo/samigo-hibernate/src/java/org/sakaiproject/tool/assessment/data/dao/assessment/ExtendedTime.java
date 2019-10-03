@@ -74,6 +74,13 @@ public class ExtendedTime implements Serializable {
         return pubAssessment.getPublishedAssessmentId();
     }
 
+    
+    public void updateDates(Date start, Date due, Date retract) {
+    	this.setStartDate(start);
+    	this.setDueDate(due);
+    	this.setRetractDate(retract);
+    }
+    
     /**
      * Sync the dates up to the dates in AssessmentAccessControlIfc
      */

@@ -39,10 +39,11 @@ import javax.faces.model.SelectItem;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-
+import org.sakaiproject.component.cover.ComponentManager;
 import org.sakaiproject.component.cover.ServerConfigurationService;
 import org.sakaiproject.service.gradebook.shared.GradebookExternalAssessmentService;
 import org.sakaiproject.spring.SpringBeanLocator;
+import org.sakaiproject.time.api.TimeService;
 import org.sakaiproject.tool.assessment.data.dao.assessment.AssessmentAccessControl;
 import org.sakaiproject.tool.assessment.data.dao.assessment.ExtendedTime;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.AssessmentAccessControlIfc;
@@ -72,7 +73,9 @@ import org.sakaiproject.util.FormattedText;
 public class ConfirmPublishAssessmentListener
     implements ActionListener {
 
-  //private static ContextUtil cu;
+	
+  private static final String DATEPICKER_FORMAT = "yyyy-MM-dd HH:mm:ss";	
+  private TimeService timeService;
   private static final GradebookServiceHelper gbsHelper =
       IntegrationContextFactory.getInstance().getGradebookServiceHelper();
   private static final boolean integrated =
@@ -80,6 +83,7 @@ public class ConfirmPublishAssessmentListener
   private boolean isFromActionSelect = false;
 
   public ConfirmPublishAssessmentListener() {
+	  timeService = ComponentManager.get(TimeService.class);
   }
 
   public void processAction(ActionEvent ae) throws AbortProcessingException {
@@ -461,7 +465,7 @@ public class ConfirmPublishAssessmentListener
 
     //#3 now u can proceed to save core assessment
     if (!isFromActionSelect) {
-    	assessment = s.save(assessmentSettings, true);
+    	assessment = s.save(assessmentSettings, true, DATEPICKER_FORMAT, timeService.getLocalTimeZone());
 
     	//unEscape the TextFormat.convertPlaintextToFormattedTextNoHighUnicode in s.save()
     	assessment.setTitle(FormattedText.convertFormattedTextToPlaintext(assessment.getTitle()));

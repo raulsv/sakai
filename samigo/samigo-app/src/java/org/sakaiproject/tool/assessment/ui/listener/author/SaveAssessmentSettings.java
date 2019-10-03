@@ -31,6 +31,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -60,6 +61,7 @@ import org.sakaiproject.tool.assessment.ui.bean.author.ItemAuthorBean;
 import org.sakaiproject.tool.assessment.ui.bean.author.AssessmentSettingsBean;
 import org.sakaiproject.tool.cover.ToolManager;
 import org.sakaiproject.tool.assessment.util.TextFormat;
+import org.sakaiproject.util.DateConverterUtil;
 import org.sakaiproject.util.ResourceLoader;
 
 /**
@@ -74,7 +76,7 @@ public class SaveAssessmentSettings
 
   private static final String EXTENDED_TIME_KEY = "extendedTime";
 
-  public AssessmentFacade save(AssessmentSettingsBean assessmentSettings, boolean isFromConfirmPublishAssessmentListener)
+  public AssessmentFacade save(AssessmentSettingsBean assessmentSettings, boolean isFromConfirmPublishAssessmentListener, final String pattern, TimeZone userZone)
   {
     // create an assessment based on the title entered and the assessment
     // template selected
@@ -306,6 +308,8 @@ public class SaveAssessmentSettings
     assessmentSettings.addExtendedTime(false);
 
     ExtendedTimeFacade extendedTimeFacade = PersistenceService.getInstance().getExtendedTimeFacade();
+
+    extendedTimesToServerDate(assessmentSettings, pattern, userZone);
     extendedTimeFacade.saveEntries(assessment, assessmentSettings.getExtendedTimes());
 
     // i. set Graphics
@@ -424,6 +428,16 @@ public class SaveAssessmentSettings
     return assessment;
   }
 
+  private static void extendedTimesToServerDate(AssessmentSettingsBean assessmentSettings, final String pattern, TimeZone userZone) {
+	  List<ExtendedTime> extendedTimes = assessmentSettings.getExtendedTimes();
+	  
+	  if(extendedTimes!=null) {
+		  extendedTimes.stream().forEach(m -> 
+				  			  m.updateDates(DateConverterUtil.convertToServerZone(pattern, m.getStartDate(), userZone),
+						  					DateConverterUtil.convertToServerZone(pattern, m.getDueDate(), userZone),
+						  					DateConverterUtil.convertToServerZone(pattern, m.getRetractDate(), userZone)));
+	  }
+  }
 
   public void updateMetaWithValueMap(AssessmentIfc assessment, Map map){
 	  if (map!=null){

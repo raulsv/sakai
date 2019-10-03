@@ -21,11 +21,13 @@
 
 package org.sakaiproject.tool.assessment.ui.listener.util;
 
+import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.Locale;
 import java.util.TimeZone;
 
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +39,7 @@ import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 
 import org.sakaiproject.time.cover.TimeService;
+import org.sakaiproject.util.DateFormatterUtil;
 import org.sakaiproject.util.ResourceLoader;
 /**
  * <p>Description: Time conversion utility class</p>
@@ -142,6 +145,45 @@ public class TimeUtil
         fmtTime = fmtTime.withZone(dateTimeZone);
       }
       return dt.toString(fmt) + " " + dt.toString(fmtTime);
+  }
+  
+  public String getDateTimeWithServerzoneConversion(Date dateToConvert) {
+	  
+	  if (dateToConvert == null) {
+          return null;
+      }
+	  
+	  DateTime dt = new DateTime(dateToConvert);
+      DateTimeFormatter fmt = ISODateTimeFormat.yearMonthDay();
+      DateTimeFormatter fmtTime = ISODateTimeFormat.hourMinuteSecond();
+
+      // If the client browser is in a different timezone than server, need to modify date
+      if (m_client_timezone !=null && m_server_timezone!=null && !m_client_timezone.hasSameRules(m_server_timezone)) {
+        DateTimeZone dateTimeZone = DateTimeZone.forTimeZone(m_server_timezone);
+        fmt = fmt.withZone(dateTimeZone);
+        fmtTime = fmtTime.withZone(dateTimeZone);
+      }
+
+      return dt.toString(fmt) + " " + dt.toString(fmtTime);
+	  //////////////////////////
+  	/*	if(dateIn == null || timeZoneOrig == null || StringUtils.isBlank(pattern)) {
+			return dateIn;
+		}
+
+		DateFormat orig = new SimpleDateFormat(pattern, Locale.ROOT);
+		orig.setTimeZone(timeZoneOrig);
+		DateFormat serverF = new SimpleDateFormat(pattern, Locale.ROOT);
+		serverF.setTimeZone(TimeZone.getDefault());
+
+		Date serverDate = null;
+		try {
+			serverDate = serverF.parse(serverF.format(orig.parse(DateFormatterUtil.format(dateIn, pattern, Locale.ROOT))));
+		} catch (ParseException e) {
+			log.warn("Error parsing the date {} to the server time zone", dateIn);
+		}
+	    		
+		return serverDate;*/
+		////////////////////
   }
   
   /*

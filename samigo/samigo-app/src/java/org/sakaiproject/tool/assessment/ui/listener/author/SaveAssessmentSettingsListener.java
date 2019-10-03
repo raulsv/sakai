@@ -22,8 +22,10 @@
 package org.sakaiproject.tool.assessment.ui.listener.author;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.TimeZone;
 
 import javax.faces.application.FacesMessage;
 import javax.faces.context.FacesContext;
@@ -33,7 +35,8 @@ import javax.faces.event.ActionListener;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-
+import org.sakaiproject.component.cover.ComponentManager;
+import org.sakaiproject.time.api.TimeService;
 import org.sakaiproject.tool.assessment.api.SamigoApiFactory;
 import org.sakaiproject.tool.assessment.data.dao.assessment.AssessmentAccessControl;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.AssessmentAccessControlIfc;
@@ -46,6 +49,7 @@ import org.sakaiproject.tool.assessment.ui.bean.author.AuthorBean;
 import org.sakaiproject.tool.assessment.ui.bean.authz.AuthorizationBean;
 import org.sakaiproject.tool.assessment.ui.listener.util.ContextUtil;
 import org.sakaiproject.tool.assessment.util.TextFormat;
+import org.sakaiproject.util.DateConverterUtil;
 import org.sakaiproject.util.FormattedText;
 
 /**
@@ -58,11 +62,12 @@ import org.sakaiproject.util.FormattedText;
 public class SaveAssessmentSettingsListener
     implements ActionListener
 {
-  //private static final GradebookServiceHelper gbsHelper = IntegrationContextFactory.getInstance().getGradebookServiceHelper();
-  //private static final boolean integrated = IntegrationContextFactory.getInstance().isIntegrated();
-
+  private static final String DATEPICKER_FORMAT = "yyyy-MM-dd HH:mm:ss";
+  private TimeService timeService;
+	
   public SaveAssessmentSettingsListener()
   {
+	  timeService = ComponentManager.get(TimeService.class);
   }
 
   public void processAction(ActionEvent ae) throws AbortProcessingException
@@ -76,7 +81,8 @@ public class SaveAssessmentSettingsListener
     AssessmentService assessmentService = new AssessmentService();
     SaveAssessmentSettings s = new SaveAssessmentSettings();
     String assessmentName = TextFormat.convertPlaintextToFormattedTextNoHighUnicode(assessmentSettings.getTitle());
- 
+    TimeZone userTimeZone = timeService.getLocalTimeZone();
+     
     // check if name is empty
     if(assessmentName!=null &&(assessmentName.trim()).equals("")){
      	String nameEmpty_err=ContextUtil.getLocalizedString("org.sakaiproject.tool.assessment.bundle.AssessmentSettingsMessages","assessmentName_empty");
@@ -96,12 +102,16 @@ public class SaveAssessmentSettingsListener
     	String startDateErr = ContextUtil.getLocalizedString("org.sakaiproject.tool.assessment.bundle.GeneralMessages","invalid_start_date");
     	context.addMessage(null,new FacesMessage(startDateErr));
     	error=true;
+    } else {
+    	assessmentSettings.setStartDate(DateConverterUtil.convertToServerZone(DATEPICKER_FORMAT, assessmentSettings.getStartDate(), userTimeZone));
     }
     // check if due date is valid
     if(!assessmentSettings.getIsValidDueDate()){
     	String dueDateErr = ContextUtil.getLocalizedString("org.sakaiproject.tool.assessment.bundle.GeneralMessages","invalid_due_date");
     	context.addMessage(null,new FacesMessage(dueDateErr));
     	error=true;
+    } else {
+    	assessmentSettings.setDueDate(DateConverterUtil.convertToServerZone(DATEPICKER_FORMAT, assessmentSettings.getDueDate(), userTimeZone));
     }
 
     // check if RetractDate needs to be nulled
@@ -120,6 +130,8 @@ public class SaveAssessmentSettingsListener
     	String retractDateErr = ContextUtil.getLocalizedString("org.sakaiproject.tool.assessment.bundle.GeneralMessages","invalid_retrack_date");
     	context.addMessage(null,new FacesMessage(retractDateErr));
     	error=true;
+    } else {
+    	assessmentSettings.setRetractDate(DateConverterUtil.convertToServerZone(DATEPICKER_FORMAT, assessmentSettings.getRetractDate(), userTimeZone));
     }
 
     // check that retract is after due and due is not null
@@ -202,7 +214,6 @@ public class SaveAssessmentSettingsListener
 		}
 	}
 	
-	//String unlimitedSubmissions = assessmentSettings.getUnlimitedSubmissions();
 	String scoringType=assessmentSettings.getScoringType();
 	if ((scoringType).equals(EvaluationModelIfc.AVERAGE_SCORE.toString()) && "0".equals(assessmentSettings.getUnlimitedSubmissions())) {
 		try {
@@ -230,6 +241,8 @@ public class SaveAssessmentSettingsListener
         	String feedbackDateErr = ContextUtil.getLocalizedString("org.sakaiproject.tool.assessment.bundle.GeneralMessages","invalid_feedback_date");
         	context.addMessage(null,new FacesMessage(feedbackDateErr));
         	error=true;
+        } else {
+        	assessmentSettings.setFeedbackDate(DateConverterUtil.convertToServerZone(DATEPICKER_FORMAT, assessmentSettings.getFeedbackDate(), userTimeZone));
         }
     }
     
@@ -270,7 +283,7 @@ public class SaveAssessmentSettingsListener
     AuthorizationBean authorization = (AuthorizationBean) ContextUtil.lookupBean("authorization");
     assessmentSettings.setOutcomeSave(author.getFromPage());
 
-    s.save(assessmentSettings, false);
+    s.save(assessmentSettings, false, DATEPICKER_FORMAT, timeService.getLocalTimeZone());
 
     // reset the core listing in case assessment title changes
     List<AssessmentFacade> assessmentList = assessmentService.getBasicInfoOfAllActiveAssessments(
